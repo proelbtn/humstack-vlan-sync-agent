@@ -12,6 +12,8 @@ import traceback
 
 from dataclasses import dataclass
 from fastcore.all import *
+import sentry_sdk
+from sentry_sdk import capture_message
 
 L = logging.getLogger(__name__)
 
@@ -170,9 +172,9 @@ class VlanSyncAgent:
     def run(self):
         L.info("starting VLAN Sync Agent")
 
-        wait_sec = 5
-        while True:
-            try:
+        try:
+            wait_sec = 5
+            while True:
                 networks = self.importer.poll()
                 L.info("polling done: %s" % networks)
 
@@ -180,19 +182,22 @@ class VlanSyncAgent:
                     L.info("syncing started (%s)" % exporter)
                     is_updated = exporter.sync(networks)
                     L.info("syncing done (%s, is_updated: %s)" % (exporter, is_updated))
-
-                wait_sec = 5
-            except Exception as e:
-                L.error(traceback.format_exc())
-                wait_sec = min(wait_sec + 5, 60)
             L.debug("sleeping %d secs..." % wait_sec)
             time.sleep(wait_sec)
+        except Exception as e:
+            L.error(traceback.format_exc())
 
 
 def main():
     with open("config.yml", "r") as f:
         conf = f.read()
     conf = yaml.load(conf, Loader=yaml.SafeLoader)
+
+    if "sentry" in conf:
+        sentry_sdk.init(
+            conf["sentry"]["endpoint"],
+            conf["sentry"]["traces_sample_rate"],
+        )
 
     logging.basicConfig(level=logging.INFO)
     importer = Importer(conf["importer"]["address"])
