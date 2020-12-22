@@ -63,7 +63,8 @@ class Importer:
 
         networks = []
         for network in res.json()["data"]["networks"]:
-            if network["meta"]["annotations"].get("require-gateway") != "true":
+            annotations = network["meta"].get("annotations")
+            if annotations and annotations.get("require-gateway") != "true":
                 continue
             network_id = network["meta"]["id"]
             vlan_id = int(network["spec"]["template"]["spec"]["id"])
@@ -184,8 +185,9 @@ class VlanSyncAgent:
                     L.info("syncing started (%s)" % exporter)
                     is_updated = exporter.sync(networks)
                     L.info("syncing done (%s, is_updated: %s)" % (exporter, is_updated))
-            L.debug("sleeping %d secs..." % wait_sec)
-            time.sleep(wait_sec)
+
+                L.debug("sleeping %d secs..." % wait_sec)
+                time.sleep(wait_sec)
         except Exception as e:
             L.error(traceback.format_exc())
 
@@ -198,7 +200,7 @@ def main():
     if "sentry" in conf:
         sentry_sdk.init(
             conf["sentry"]["endpoint"],
-            conf["sentry"]["traces_sample_rate"],
+            traces_sample_rate=conf["sentry"]["traces_sample_rate"],
         )
 
     logging.basicConfig(level=logging.INFO)
