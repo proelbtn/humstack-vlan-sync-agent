@@ -63,6 +63,8 @@ class Importer:
 
         networks = []
         for network in res.json()["data"]["networks"]:
+            if network["meta"]["annotations"].get("require-gateway") != "true":
+                continue
             network_id = network["meta"]["id"]
             vlan_id = int(network["spec"]["template"]["spec"]["id"])
             cidr_v4 = network["spec"]["template"]["spec"]["ipv4CIDR"]
